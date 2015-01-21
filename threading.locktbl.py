@@ -68,7 +68,13 @@ class updatedb (threading.Thread):
        	    return 1
          i=0; # print line
          #time.sleep(2)
-         while i <= len(line)-2 : #the last one in list is not  'i' 'e' or '?'
+         try: 
+           int(line[len(line)-1])
+         except Exception :
+           tail=2
+         else :
+           tail=1
+         while i <= len(line)-tail : #the last one in list is not  'i' 'e' or '?'
              #if n%100000==0 :
              #   print "as adjecency:"+" "+line[i]+" "+line[i+1]
              if line[i]!=line[i+1] : #the next ASN should be different from the first one
