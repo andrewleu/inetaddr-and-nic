@@ -26,17 +26,14 @@ def updateCC( as_code, c_code) :
              cur.execute("update aspath set desas ='%s' where id='%s'" %(cc[0], n))
            except mysql.Error :
              print mysql.Error
-       n=n-1
-     else :
-        n=n-1
-        continue
-     if n%2000==0 :
-       conn.commit()
+     n=n-1
+     if n%2000==1 :
+        conn.commit() 
   conn.commit()
   cur.close()
   conn.close()
 
-updateCC('asn', 'orias')
+#updateCC('asn', 'orias')
 updateCC('nextasn','desas')
 #desas
 #209495 CZ IL
