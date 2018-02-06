@@ -8,7 +8,8 @@ import os
 import datetime
 conn=mysql.connect('127.0.0.1','ipv6bgp','ipv6','NICstat')
 cur=conn.cursor()
-date=str(datetime.datetime.now()-datetime.timedelta(days=1))
+date=str(datetime.datetime.now())
+#-datetime.timedelta(days=1))
 date_format=date.split()[0]
 date=date.replace('-','').split()[0]
 """
@@ -28,10 +29,12 @@ dumpfile='./bgptbl/'+'bgp'+date
 cnroute='./bgptbl/'+'cnbgp'+date
 os.system('wget -q http://bgp.potaroo.net/v6/as6447/bgptable.txt -O %s' % dumpfile)
 fhandler=  file(dumpfile,'r')
-cnaspath= file(cnroute,'a+')
+cnaspath= file(cnroute,'w')
 error=0; totalLines=0;cnentries=0;cnblocks=0;prvsline='';globalentries=0;
 readline=fhandler.readline()
-while 1 :
+try : 
+ err=0
+ while 1 :
   line=readline # read PREFIX
   if line=='' :
          break
@@ -44,9 +47,8 @@ while 1 :
     readline=fhandler.readline()
     if readline=='' :
        break
-    rl=readline.split()
 #    print rl
-    if rl[0]!=blocks[0] :
+    if readline.split()[0]!=blocks[0] :  #pass all the same route entries followed
       break    
   asn=blocks[1:]
   globalentries+=1
@@ -72,18 +74,37 @@ while 1 :
     continue
   if result=='cn' :
     cnentries+=1
-    blocks=blocks[0].split('/'); print "%s: %s" % (cnentries, line)
-    cnaspath.write(str( cnentries)+" "+line+'\n')
+    blocks=blocks[0].split('/'); 
+    #print "%s: %s" % (cnentries, line)
+    cnaspath.write(line+'\n')
     #print outline
     cnblocks+=int(2**(48-int(blocks[1])))
-cur.execute("select sum(power(2,(48-block))) from inet_num where  cc='CN' and type='ipv6'") ;
-g_blocks=cur.fetchone()
-cur.execute("insert bgpitems(date,chinabgpitem,totalbgpitem,ratio,type) values('%s','%s','%s','%s','t')" \
-% (date_format,cnentries,globalentries ,float(cnentries)/globalentries))
-cur.execute("insert publish(date,publish, sum,ratio,type) values('%s', '%s','%s','%s','t')" \
-% (date_format,cnblocks,g_blocks[0],float(cnblocks)/g_blocks[0]))
+except BaseException, e :
+   print e
+   err=1
+if err!=1 :
+  cur.execute("select sum(power(2,(48-block))) from inet_num where  cc='CN' and type='ipv6'") ;
+  g_blocks=cur.fetchone()
+  cur.execute("insert bgpitems(date,chinabgpitem,totalbgpitem,ratio,type) values('%s','%s','%s','%s','t')" \
+  % (date_format,cnentries,globalentries ,float(cnentries)/globalentries))
+  cur.execute("insert publish(date,publish, sum,ratio,type) values('%s', '%s','%s','%s','t')" \
+  % (date_format,cnblocks,g_blocks[0],float(cnblocks)/g_blocks[0]))
 cur.execute("commit")
 cur.close()
 conn.close()
 fhandler.close()
+cnaspath.write("BGP entries from China: "+str(cnentries))
 cnaspath.close()
+"""
+the DB table
+CREATE TABLE `bgpitems` (
+  `Id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `Date` varchar(20) NOT NULL DEFAULT '',
+  `ChinaBgpItem` mediumint(9) unsigned DEFAULT NULL,
+  `TotalBgpItem` int(11) unsigned DEFAULT NULL,
+  `Ratio` float(8,5) unsigned DEFAULT NULL,
+  `type` char(1) DEFAULT '',
+  PRIMARY KEY (`Id`,`Date`),
+  UNIQUE KEY `id` (`Id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
+"""
