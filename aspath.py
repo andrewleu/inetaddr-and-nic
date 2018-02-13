@@ -7,7 +7,9 @@ import socket
 import select
 import os
 import datetime
-date=str(datetime.datetime.now())
+d1=datetime.datetime.now() #current time
+date=str(d1)
+d2=d1-datetime.timedelta(days=1) #previous update date
 #-datetime.timedelta(days=1))
 date_format=date.split()[0]
 date=date.replace('-','').split()[0]
@@ -39,7 +41,7 @@ fhandler=     file(filename,'r')
 cur.execute("update aspath set locked=0 where type='%s'" % type)
 cur.execute("commit")
 try:
-  while True :
+   while True :
     line=fhandler.readline()
     if line.find('::/0')!=-1 :
        continue
@@ -60,15 +62,15 @@ try:
         #   print line[i]+":"+line[i+1]
         if line[i] != line[i+1] : # asn=asn 
            cur.execute('begin')    
-           if cur.execute("select id, connect,locked  from aspath where type='%s' and `asn`='%s' \
+           if cur.execute("select id, connect,locked,up_date  from aspath where type='%s' and `asn`='%s' \
            and nextasn='%s'  " % (type,line[i],line[i+1]))== 0 :
            # inserting NEW entry
-             cur.execute("insert aspath(type,asn, nextasn,1stins, `up_date`,locked) \
-             value('%s','%s','%s',substring(now(),1,10),substring(now(),1,10), 0)" \
+             cur.execute("insert aspath(type,asn, nextasn,1stins, locked) \
+             value('%s','%s','%s',substring(now(),1,10), 0)" \
              % (type,line[i],line[i+1]))
              #print line[i], line[i+1]
            else : #update previous records
-              fetch=cur.fetchone()
+              fetch=cur.fetchone(); #print fetch
               if fetch[2]==1 :  # line has been updated
                   i=i+1
                   continue
@@ -87,9 +89,11 @@ try:
                    toAS=cur.fetchone()[0];
               else :
                    toAS='-'
+              if fetch[3]!='' or fetch[3]!='0000-00-00' :
+                  conn=fetch[1]+1
               cur.execute("select id from aspath where id=%s for update" % fetch[0])
-              cur.execute("update aspath set orias= '%s',desas='%s',locked=1, up_date=substring(now(),1,10) \
-              where id=%s " % (fromAS, toAS, fetch[0]))
+              cur.execute("update aspath set orias= '%s',desas='%s',locked=1,connect=%s, up_date=substring(now(),1,10) \
+              where id=%s " % (fromAS, toAS,conn, fetch[0]))
         i+=1
         if fetch[0]%10000 ==0 :
            print fetch[0], as1, fromAS, as2, toAS
@@ -98,14 +102,14 @@ try:
 except BaseException, e :
      print "Error :"
      print e
-     cur.execute("commit")
+     cur.execute("commit") 
 fhandler.close()
 #this version will test if the connection is stable,and the region
 """
 try : 
  while True :  #to check the regions for both ends of the aspath
    fromAS='-'; toAS='-'
-   if cur.execute("select id,asn,nextasn from aspath where locked=0  order by rand() limit 2000") !=0 :
+   if cur.execute("select id,asn,nextasn,connect,  up_date from aspath where locked=0  order by rand() limit 2000") !=0 :
     lines=list(cur.fetchall()); 
     for line in lines :
       line=list(line)
@@ -122,10 +126,12 @@ try :
       else :
          toAS='-'
          #print '%s, %s' %(line[1],line[2])
+      if line[4]==''  or line[4]!='0000-00-00' :
+         conn=line[3]+1
      #note=list(fromAS)[0]+'-'+list(toAS)[0]; #print note 
       cur.execute("select id from aspath where id=%s for update" % line[0])
-      cur.execute("update aspath set orias= '%s',desas='%s',locked=1, up_date=substring(now(),1,10) \
-      where id=%s " % (fromAS, toAS, line[0]))
+      cur.execute("update aspath set orias= '%s',desas='%s',connect=%s, locked=1,up_date=ubstring(now(),1,10)\
+      where id=%s " % (fromAS, toAS, conn, line[0]))
     cur.execute("commit")
    else :
      break  #end
