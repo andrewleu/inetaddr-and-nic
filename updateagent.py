@@ -22,7 +22,6 @@ reload(sys)
 sys.setdefaultencoding('UTF-8')
 cur_tab.execute("select * from asncn");
 list=cur_tab.fetchall()
-list=list[118:]
 for item in list :
    if item[1].find('.') !=-1 :
        asn=int(item[1].split('.')[0])*65536+int(item[1].split('.')[1])
@@ -59,9 +58,10 @@ for item in list :
    response=response.replace("'",'').replace('"','')
    response=response.replace('\n','|').replace('\t',' ')
    response=response.replace('||',"|").replace("||","|")
-   p=re.compile(r'\s+')
-   response=p.sub(r' ', response) ;print response
-   response=response.replace('\xa3',' ').replace('\xac','')
+   p=re.compiler('[\x80-\xff]+') ;#non ascii code to match
+   response=p.sub(r' ', response) ; # replace none ascii code
+   p=re.compile(r'\s+') ;# matching space char
+   response=p.sub(r' ', response)
    #p=re.compile(r'^\s|^"|"|\W+');
    #//response=p.sub(r'',response)
    #//print response
