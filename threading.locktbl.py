@@ -57,57 +57,53 @@ class updatedb (threading.Thread):
        time.sleep(3)
        print self.name
        while True :
+         e=''
          mutex.acquire(2)
-         line=rfile.readaLine()
+         try :
+            line=rfile.readaLine()
+         except Exception  as e :
+            print  "reading line error %s" % e
+         finally:
          #print "as path "+str(line)
-         n=rfile.n
-         mutex.release()
-         if line== 0 :
+           n=rfile.n
+           mutex.release()
+         if e :
+             continue
+         if line== '' :
             cur.close()
             conn.close()
        	    return 1
-         i=0; # print line
+         i=0;  #print "as path %s" % line
          #time.sleep(2)
-         try: 
+         try:                      
            int(line[len(line)-1])
          except Exception :
-           tail=2
+           tail=2   ; # if the line ends with i e ?, tail is 2
          else :
-           tail=1
-         while i <= len(line)-tail : #the last one in list is not  'i' 'e' or '?'
-             #if n%100000==0 :
-             #   print "as adjecency:"+" "+line[i]+" "+line[i+1]
+           tail=1   ;#or tail is 1
+         if n%10000==0 :
+            print n 
+            print line
+         while i < len(line)-tail : #the last one in list is not  'i' 'e' or '?'
+             if n%10000==0 :
+                  print "as adjecency:"+" "+line[i]+" "+line[i+1]
              if line[i]!=line[i+1] : #the next ASN should be different from the first one
-                 cur.execute("lock table aspath write")
-                 if cur.execute("select id, connect, locked from aspath  where type='%s' and `asn`='%s'and nextasn='%s' \
-                  and locked=0 for update "  % (type,line[i],line[i+1]))==0 : #locked or new entry
-                    if cur.execute("select id, connect, locked from aspath  where type='%s' and `asn`='%s'and nextasn='%s' \
-                    for update "  % (type,line[i],line[i+1]))!=0 : #locked 
-                       if n%1000 ==0 and i==0:
-                          cur.execute("update aspath  set locked=%s  where type='%s' and `asn`='%s'and nextasn='%s'" \
-                             % (n,type,line[i],line[i+1]))
-                          cur.execute("commit")
-                          #print line[i]+' '+line[i+1];
-                       i+=1;cur.execute("unlock tables");  continue      #it is locked, do nothing
-                    #new entry, first insert in the list 
-                    cur.execute("insert aspath (type,`asn`,nextasn) value('%s','%s','%s')" % (type,line[i],line[i+1]))
-                    #print 'new entry'+ line[i]+' '+line[i+1]
-                    #time.sleep(1)
-                    cur.execute("commit") 
-                 else :    
-                     fetch=list(cur.fetchone()) ; 
-                     #print fetch
-	             #print self.name
-                     #print line
-                     if fetch[1] < cnt : # will update the counter just once
-                       cur.execute("update aspath  set connect=connect+1,locked=1  where \
-                          type='%s' and `asn`='%s'and nextasn='%s'" \
-                             % (type,line[i],line[i+1]))
+                 #cur.execute("lock table aspath write")
+                  try :
+                     cur.execute("select id from aspath  where type='%s' and `asn`='%s'and nextasn='%s' for update \
+                     "  % (type,line[i],line[i+1]))
+                     entry=cur.fetchone()
+                     if entry is None or entry[0]=='':
+                        cur.execute("insert aspath (type,`asn`,nextasn,`1stins`,locked,up_date) \
+                        value('%s','%s','%s',substring(now(),1,10),'%s',substring(now(),1,10))" % (type,line[i],line[i+1],n))
+                     else :
+                        cur.execute("update aspath set connect=connect+1, up_date=substring(now(),1,10) where id=%d" % entry[0] )   
+                  except Exception as e :
+                      print entry
+                      print "mysql op error %s" % e 
+                  finally :
                        cur.execute("commit")
-                       #cur.execute("select * from aspath  where id=%s" % fetch[0])
-                       #print cur.fetchone();print 'unlocked'
-                 cur.execute("unlock tables")
-             i+=1
+             i=i+1 ;# next  item  in the read line     
 global rfile
 global mutex
 mutex=threading.Lock()
@@ -115,7 +111,7 @@ global cnt
 global timing
 global type
 type='ipv4'
-filename='/home/ipaddr/bgptable.txt'
+filename='bgptable.txt'
 args=sys.argv
 dbaddr="127.0.0.1"
 #if len(args) <2 :
@@ -130,66 +126,68 @@ timing=int(time.time())
 lck=line[1]
 startTime=timing
 #lck=1
+"""
 cnt=int(line[0])
-cur.execute("commit")
 cur.execute("select max(locked) from aspath  where type='ipv4'")
 readLines=int(list(cur.fetchone())[0])
-cur.execute("commit")
 print str(readLines)+' read'+ str(lck)
 cur.close()
 conn.close()
+filename='bgptable.txt'
 # asn to store the times for checking of ipv4
 if lck==0 :
-    os.system('rm -f %s' % filename) ;#rm the file                         
+"""
+if 1 :
+    #os.system('rm -f %s' % filename) ;#rm the file                         
     print "Downloading"     
-    os.system('wget -q http://bgp.potaroo.net/as6447/bgptable.txt  -O %s' % filename)
+    #os.system('wget -q http://bgp.potaroo.net/as6447/bgptable.txt  -O %s' % filename)
 # asn to store the times for checking of ipv4 
-    cnt=cnt+1
-    conn=mysql.connect(dbaddr,'ipv6bgp','ipv6','NICstat')
-    cur=conn.cursor()
-    cur.execute("unlock tables")
-    cur.execute("begin")
-    cur.execute("update aspath  set nextasn = '%s', locked=1 where type='cnt'" % str(cnt))  
-    cur.execute('commit')
-    cur.execute("begin")
-    cur.execute("update aspath  set locked=0 where type='%s'" % type) #unlock all ipv4 entry
-    cur.execute("commit")
+    #cnt=cnt+1
+    #cur.execute("unlock tables")
+    #cur.execute("begin")
+    #cur.execute("update aspath  set nextasn = '%s', locked=1 where type='cnt'" % str(cnt))  
+    #cur.execute('commit')
+    #cur.execute("begin")
+    #cur.execute("update aspath  set locked=0 where type='%s'" % type) #unlock all ipv4 entry
+    #cur.execute("commit")
     readLines=0  
 #elif args[1]!='-g' :
 #    print "-n new check"
 #    print "-g go on" 
 #    conn.close();  exit()
     conn.close() 
-completed=1   
 rfile=FileReading(filename)
 if rfile.skiplines(readLines) ==0 :
    del rfile; exit()
-for thrd in range(8) :
+for thrd in range(12) :
     try:
 	th=updatedb()
 	th.start()
     except:
         sleep(3)
 #   del rfile
-        print "Exception occurs"
-        completed=0
+        print "Exception for threading occurs"
     finally:
       time.sleep(1)
       print "OK"
-for thrd in range(8) :
-   th.join()
+for thrd in range(12) :
+  try :
+    th.join()
+  except e:
+    print e
+"""
 if completed==1 :
    conn=mysql.connect(dbaddr,'ipv6bgp','ipv6','NICstat')
    cur=conn.cursor()
    cur.execute("update aspath  set locked=0 where type='cnt'"); 
    cur.execute("insert entries(type,entries,date) value('%s','%s',now())" % (type,rfile.n)) 
    cur.execute("commit")
-   print ("unlock the table for next update")
    cur.close()
    conn.close() 
+"""
 endTime=int(time.time())
 print "Duration %s"  % (endTime-startTime)
-del rfile
+#del rfile
 print "Exiting"
 exit()
 

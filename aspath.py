@@ -23,57 +23,48 @@ cur.execute("select asn, locked from aspath where type='cnt'")
 ftch=cur.fetchone()
 cnt=int(ftch[0])
 print "Proceeding the BGP table of IPv6"
-"""
 lck=ftch[1]
 lck=0
-if lck==0 :
-  os.system('rm -f %s' % filename) ;#rm the file
+#if lck==0 :
+if 1:
+#  os.system('rm -f %s' % filename) ;#rm the file
   print "Downloading"
-  os.system('wget -q bgp.potaroo.net/v6/as6447/bgptable.txt  -O %s' % filename)
+#  os.system('wget -q bgp.potaroo.net/v6/as6447/bgptable.txt  -O %s' % filename)
   cnt=int(ftch[0])+1
-  cur.execute("update aspath set asn = '%s', locked=1 where type='cnt'" % str(cnt))  
-  cur.execute("commit")
-  cur.execute("update aspath set locked=0 where type='%s'" % type) #unlock all ipv6 entry
-  cur.execute("commit")
+#  cur.execute("update aspath set asn = '%s', locked=1 where type='cnt'" % str(cnt))  
+#  cur.execute("commit")
+#  cur.execute("update aspath set locked=0 where type='%s'" % type) #unlock all ipv6 entry
+#  cur.execute("commit")
  # use type=cnt entry to store check times asn for ipv6 nextasn for ipv4
-"""
 fhandler=     file(filename,'r')
-cur.execute("update aspath set locked=0 where type='%s'" % type)
-cur.execute("commit")
-try:
-   while True :
+#cur.execute("update aspath set locked=0 where type='%s'" % type)
+#cur.execute("commit")
+fetch=[0,0]
+#try:
+while True :
     line=fhandler.readline()
     if line.find('::/0')!=-1 :
+       no+=1
        continue
     no+=1
 #   print no
     if line=='' :
          break
-    if line.strip()[0]==' ' :
-      continue 
+#   if line.strip()[0]==' ' :
+#      continue 
     line=line.strip()
     line=line.replace(",", " ")
     line=line.replace("{",  ""); line=line.replace("}" ,"")
     line=line.split()[1:] #from `second field to analyse
     i=0
    #print str(no)+' '+str(line)
-    while i < len(line)- 1:
+    while i < len(line)- 1 :
         #if no%10000==0 :
         #   print line[i]+":"+line[i+1]
         if line[i] != line[i+1] : # asn=asn 
-           cur.execute('begin')    
            if cur.execute("select id, connect,locked,up_date  from aspath where type='%s' and `asn`='%s' \
            and nextasn='%s'  " % (type,line[i],line[i+1]))== 0 :
            # inserting NEW entry
-             cur.execute("insert aspath(type,asn, nextasn,1stins, locked) \
-             value('%s','%s','%s',substring(now(),1,10), 0)" \
-             % (type,line[i],line[i+1]))
-             #print line[i], line[i+1]
-           else : #update previous records
-              fetch=cur.fetchone(); #print fetch
-              if fetch[2]==1 :  # line has been updated
-                  i=i+1
-                  continue
               as1=line[i];as2=line[i+1]
               if line[i].find('.')>0 :
                  as1=str(int(line[i].split('.')[0])*65536+int(line[i].split('.')[1]))
@@ -89,59 +80,25 @@ try:
                    toAS=cur.fetchone()[0];
               else :
                    toAS='-'
+              cur.execute("insert aspath(type,asn, nextasn,1stins, locked,up_date,orias,desas) \
+              value('%s','%s','%s',substring(now(),1,10), '%s',substring(now(),1,10),'%s','%s')" \
+              % (type,line[i],line[i+1],no, fromAS,  toAS))
+             #print line[i], line[i+1]
+           else : #update previous records
+              fetch=cur.fetchone(); #print fetch
               if fetch[3]!='' or fetch[3]!='0000-00-00' :
-                  conn=fetch[1]+1
+                  connecting=fetch[1]+1
               cur.execute("select id from aspath where id=%s for update" % fetch[0])
-              cur.execute("update aspath set orias= '%s',desas='%s',locked=1,connect=%s, up_date=substring(now(),1,10) \
-              where id=%s " % (fromAS, toAS,conn, fetch[0]))
+              cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10) \
+              where id=%s " % (connecting, fetch[0]))
         i+=1
-        if fetch[0]%10000 ==0 :
-           print fetch[0], as1, fromAS, as2, toAS
+        if no%1000 ==0 :
+              print "an AS-path"
+              print no, line[i-1], line[i]
+              print line
         # update Previous entry
-    cur.execute('commit')
-except BaseException, e :
-     print "Error :"
-     print e
-     cur.execute("commit") 
-fhandler.close()
-#this version will test if the connection is stable,and the region
-"""
-try : 
- while True :  #to check the regions for both ends of the aspath
-   fromAS='-'; toAS='-'
-   if cur.execute("select id,asn,nextasn,connect,  up_date from aspath where locked=0  order by rand() limit 2000") !=0 :
-    lines=list(cur.fetchall()); 
-    for line in lines :
-      line=list(line)
-      if line[1].find('.')>0 : #long ASN some noted as 3.9
-        line[1]= str( int(line[1].split('.')[0])*65536+int(line[1].split('.')[1]))
-      if cur.execute("select CC  from inet_num where type='asn' and addr<=%s and addr+block-1 >=%s order by date desc" % (line[1],line[1])) !=0 :
-        fromAS=cur.fetchone()[0]; 
-      else :
-        fromAS='-'
-      if line[2].find('.')>0 :
-        line[2]= str( int(line[2].split('.')[0])*65536+int(line[2].split('.')[1]))
-      if cur.execute("select CC from inet_num where type='asn' and addr<=%s and addr+block-1 >=%s order by date desc" % (line[2],line[2]))!=0 :
-         toAS=cur.fetchone()[0];  
-      else :
-         toAS='-'
-         #print '%s, %s' %(line[1],line[2])
-      if line[4]==''  or line[4]!='0000-00-00' :
-         conn=line[3]+1
-     #note=list(fromAS)[0]+'-'+list(toAS)[0]; #print note 
-      cur.execute("select id from aspath where id=%s for update" % line[0])
-      cur.execute("update aspath set orias= '%s',desas='%s',connect=%s, locked=1,up_date=ubstring(now(),1,10)\
-      where id=%s " % (fromAS, toAS, conn, line[0]))
-    cur.execute("commit")
-   else :
-     break  #end
-   if line[0]%100==0 :
-     print fromAS, toAS
-except BaseException, e :
-  print 'ERROR:'
-  print e
-  cur.execute("commit")
-"""
+        cur.execute('commit')
+ 
 print "updating database "+str(no)
 cur.execute("update aspath set locked=0 where type='cnt'")  
 #cur.execute("insert entries(type,entries,date) value('%s','%s',substring(now(),1,10)" % (type,no))
