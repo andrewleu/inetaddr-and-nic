@@ -25,76 +25,86 @@ dumpfile='./bgptbl/'+'bgp'+date
 cnroute='./bgptbl/'+'cnbgp'+date
 os.system("sed -n  -e '/^PREFIX.\+/w %s' -e '/^ASPATH.\+/w %s' rib.dump" % (dumpfile,dumpfile))
 """
-dumpfile='./bgptbl/'+'bgp'+date
+dumpfile='./bgptbl/'+'bgpv6'+date
 cnroute='./bgptbl/'+'cnbgp'+date
-os.system('wget -q http://bgp.potaroo.net/v6/as6447/bgptable.txt -O %s' % dumpfile)
+if not os.path.isfile(dumpfile) :
+   os.system('wget -q http://bgp.potaroo.net/v6/as6447/bgptable.txt -O %s' % dumpfile)
 fhandler=  file(dumpfile,'r')
 cnaspath= file(cnroute,'w')
 error=0; totalLines=0;cnentries=0;cnblocks=0;prvsline='';globalentries=0;
-readline=fhandler.readline()
 try : 
- err=0
- while 1 :
-  line=readline # read PREFIX
-  if line=='' :
+   err=0
+   readline=fhandler.readline()
+   
+   while 1 :
+    line=readline # read PREFIX
+    if line=='' :
          break
-  line=line.strip()
-  blocks=line.split()
-  if blocks[0]=='::/0' :
+    line=line.strip()
+    blocks=line.split()
+    if blocks[0]=='::/0' :
+       readline=fhandler.readline()
+       continue  #default route
+    while True :
       readline=fhandler.readline()
-      continue  #default route
-  while True :
-    readline=fhandler.readline()
-    if readline=='' :
-       break
+#    if readline=='' :
+#       break
 #    print rl
-    if readline.split()[0]!=blocks[0] :  #pass all the same route entries followed
-      break    
-  asn=blocks[1:]
-  globalentries+=1
-  try :
-    asn=asn[-1] #last as of the aspath
-  except Exception, e:
-    print e;
-    error=1
-  if error :
-    error=0 
-    continue
-  if asn.find('{')!= -1 :
-     continue
-  asn=asn.split('.')
-  if len(asn)==2 :
-    asn=int(asn[0])*65536+int(asn[1])
-  else :
-    asn=int(asn[0])
-  if cur.execute("select cc, date from inet_num where type='asn' and addr<=%d and addr+block>%d order by date desc" % (asn,asn)) :
-    result=cur.fetchone()[0].lower() #as in China?
-  else :
-    result=''
-    continue
-  if result=='cn' :
-    cnentries+=1
-    blocks=blocks[0].split('/'); 
-    #print "%s: %s" % (cnentries, line)
-    cnaspath.write(line+'\n')
+      if readline.split()[0]!=blocks[0] :  #pass all the same route entries followed
+        break    
+    asn=blocks[1:]
+    globalentries+=1
+    try :
+      asn=asn[-1] #last as of the aspath
+    except Exception, e:
+      print e;
+      error=1
+    if error :
+      error=0 
+      continue
+    if asn.find('{')!= -1 :
+       continue
+    asn=asn.split('.')
+    if len(asn)==2 :
+      asn=int(asn[0])*65536+int(asn[1])
+    else :
+      asn=int(asn[0])
+    if cur.execute("select cc, date from inet_num where type='asn' and addr<=%d and addr+block>%d order by date desc" % (asn,asn)) :
+      result=cur.fetchone()[0].lower() #as in China?
+      #print str(asn)+": "+result
+    else :
+      result=''
+      continue
+    if result=='cn' :
+      cnentries+=1
+      blocks=blocks[0].split('/');
+    #  if cnentries%100==0 : 
+      if 1 :
+            print "%s: %s" % (cnentries, line)
+      cnaspath.write(line+'\n')
     #print outline
-    cnblocks+=int(2**(48-int(blocks[1])))
-except BaseException, e :
+      cnblocks+=int(2**(48-int(blocks[1])))
+except Exception, e :
    print e
    err=1
-if err!=1 :
-  cur.execute("select sum(power(2,(48-block))) from inet_num where  cc='CN' and type='ipv6'") ;
-  g_blocks=cur.fetchone()
-  cur.execute("insert bgpitems(date,chinabgpitem,totalbgpitem,ratio,type) values('%s','%s','%s','%s','t')" \
-  % (date_format,cnentries,globalentries ,float(cnentries)/globalentries))
-  cur.execute("insert publish(date,publish, sum,ratio,type) values('%s', '%s','%s','%s','t')" \
-  % (date_format,cnblocks,g_blocks[0],float(cnblocks)/g_blocks[0]))
+finally :
+  fhandler.close()
+  cnaspath.write("BGP entries from China: "+str(cnentries))
+  cnaspath.close()
+
+try :
+  if err!=1 :
+    cur.execute("select sum(power(2,(48-block))) from inet_num where  cc='CN' and type='ipv6'") ;
+    g_blocks=cur.fetchone()
+    cur.execute("insert bgpitems(date,chinabgpitem,totalbgpitem,ratio,type) values('%s','%s','%s','%s','t')" \
+    % (date_format,cnentries,globalentries ,float(cnentries)/globalentries))
+    cur.execute("insert publish(date,publish, sum,ratio) values('%s', '%s','%s','%s')" \
+    % (date_format,cnblocks,g_blocks[0],float(cnblocks)/g_blocks[0]))
+except Exceptioin, e :
+   print e
 cur.execute("commit")
 cur.close()
 conn.close()
-fhandler.close()
-cnaspath.write("BGP entries from China: "+str(cnentries))
-cnaspath.close()
 """
 the DB table
 CREATE TABLE `bgpitems` (
