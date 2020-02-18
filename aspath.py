@@ -16,21 +16,24 @@ date=date.replace('-','').split()[0]
 conn=mysql.connect('127.0.0.1','ipv6bgp','ipv6','NICstat')
 cur=conn.cursor()
 type='ipv6'
-filename='./bgptbl/'+'bgp'+date
+filename='./bgptbl/'+'bgpv6'+date
 no=0; #lines number
 cur.execute("select asn, locked from aspath where type='cnt'")
 # asn to store the times for checking ipv6 aspath
-ftch=cur.fetchone()
-cnt=int(ftch[0])
+ftch=cur.fetchone(); print ftch
+if ftch[0]!='' :
+   cnt=int(ftch[0])
+else :
+   cnt=0
 print "Proceeding the BGP table of IPv6"
 lck=ftch[1]
 lck=0
 #if lck==0 :
-if 1:
-#  os.system('rm -f %s' % filename) ;#rm the file
+if not os.path.isfile(filename) :
+  #os.system('rm -f %s' % filename) ;#rm the file
   print "Downloading"
-#  os.system('wget -q bgp.potaroo.net/v6/as6447/bgptable.txt  -O %s' % filename)
-  cnt=int(ftch[0])+1
+  os.system('wget -q bgp.potaroo.net/v6/as6447/bgptable.txt  -O %s' % filename)
+  cnt=cnt+1
 #  cur.execute("update aspath set asn = '%s', locked=1 where type='cnt'" % str(cnt))  
 #  cur.execute("commit")
 #  cur.execute("update aspath set locked=0 where type='%s'" % type) #unlock all ipv6 entry
@@ -57,14 +60,18 @@ while True :
     line=line.replace("{",  ""); line=line.replace("}" ,"")
     line=line.split()[1:] #from `second field to analyse
     i=0
+    if no%10000==0 :
+       print "line number : %s" % no
+       print line
    #print str(no)+' '+str(line)
     while i < len(line)- 1 :
-        #if no%10000==0 :
-        #   print line[i]+":"+line[i+1]
+        if no%10000==0 :
+          print line[i]+":"+line[i+1]
         if line[i] != line[i+1] : # asn=asn 
            if cur.execute("select id, connect,locked,up_date  from aspath where type='%s' and `asn`='%s' \
            and nextasn='%s'  " % (type,line[i],line[i+1]))== 0 :
            # inserting NEW entry
+              """
               as1=line[i];as2=line[i+1]
               if line[i].find('.')>0 :
                  as1=str(int(line[i].split('.')[0])*65536+int(line[i].split('.')[1]))
@@ -80,9 +87,10 @@ while True :
                    toAS=cur.fetchone()[0];
               else :
                    toAS='-'
-              cur.execute("insert aspath(type,asn, nextasn,1stins, locked,up_date,orias,desas) \
-              value('%s','%s','%s',substring(now(),1,10), '%s',substring(now(),1,10),'%s','%s')" \
-              % (type,line[i],line[i+1],no, fromAS,  toAS))
+              """
+              cur.execute("insert aspath(type,asn, nextasn,1stins, locked,up_date) \
+              value('%s','%s','%s',substring(now(),1,10), '%s',substring(now(),1,10))" \
+              % (type,line[i],line[i+1],no))
              #print line[i], line[i+1]
            else : #update previous records
               fetch=cur.fetchone(); #print fetch
@@ -92,10 +100,10 @@ while True :
               cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10) \
               where id=%s " % (connecting, fetch[0]))
         i+=1
-        if no%1000 ==0 :
-              print "an AS-path"
-              print no, line[i-1], line[i]
-              print line
+        #if no%1000 ==0 :
+        #      print "an AS-path"
+        #      print no, line[i-1], line[i]
+        #      print line
         # update Previous entry
         cur.execute('commit')
  
