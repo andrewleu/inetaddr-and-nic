@@ -6,24 +6,25 @@ import sys
 def nicStat(nic): 
   if nic=='ripe-ncc' :
     filename= 'delegated-ripencc-latest'
-    os.system('rm -f /root/ipaddr/%s' % filename)
-    os.system('wget ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O /root/ipaddr/%s' % (filename,filename)) 
-    """ elif nic=='arin' :
-    filename='delegated-arin-extended-latest'
-    os.system('rm -f /root/ipaddr/%s' % filename)
-    os.system('wget --prefer-family=ipv6  ftp://ftp.apnic.net/pub/stats/arin/%s -O /root/ipaddr/%s' % (filename,filename))
+    os.system('rm -f ./nicdata/%s' % filename)
+    os.system('wget ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
+    """ 
+    elif nic=='arin' :
+      filename='delegated-arin-extended-latest'
+      os.system('rm -f ./nicdata/%s' % filename)
+      os.system('wget --prefer-family=ipv6  ftp://ftp.apnic.net/pub/stats/arin/%s -O ./nicdata/%s' % (filename,filename))
     elif nic=='apnic' :
-    filename='delegated-apnic-extended-latest'
-    os.system('rm -f /root/ipaddr/%s' % filename)
-    os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O /root/ipaddr/%s' % (nic,filename,filename))
-    print 'apnic'
+      filename='delegated-apnic-extended-latest'
+      os.system('rm -f ./nicdata/%s' % filename)
+      os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))
+      print 'apnic'
     """
   else :
      filename='delegated-'+nic+'-extended-latest'
-     os.system('rm -f /root/ipaddr/%s' % filename) ;#rm the file      
-     os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O /root/ipaddr/%s' % (nic,filename,filename))         
+     os.system('rm -f ./nicdata/%s' % filename) ;#rm the file      
+     os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))         
   conn=mdb.connect('127.0.0.1','ipv6bgp','ipv6','NICstat')         
-  filename='/root/ipaddr/'+filename                  
+  filename='./nicdata/'+filename                  
   fhandler=	file(filename,'r')         
   cnt=0                    
   cur=conn.cursor()                  
@@ -57,8 +58,6 @@ def nicStat(nic):
                 except mdb.Error, e  :
                    print "Error is %s" % e
                    error=1
-                except  :
-                   error=1
                 if error :         
                    continue
              conn.commit() 
@@ -66,7 +65,6 @@ def nicStat(nic):
 #        print 'pass '              
   fhandler.close()
   conn.close()
-nicStat('arin')
 niclist=['ripe-ncc','arin','afrinic','lacnic'] 
 for nic in niclist :     
 	nicStat(nic)

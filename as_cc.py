@@ -26,7 +26,7 @@ def updateCC(whereabout, as_code) :
     if cur.execute("select cc, id,  addr, block,date from inet_num where type='asn' and (cast(addr as  unsigned))<='%s'  and (cast(addr as unsigned)+block)>'%s' order by date desc" % (asn, asn)) :
         a=cur.fetchall();
         #if  n%1000==0 :
-        if asn>50000 :
+        if asn>60000 :
           print "items: "+items[1]
           print a
         cc=a[0] 
