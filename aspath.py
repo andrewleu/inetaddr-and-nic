@@ -69,7 +69,7 @@ while True :
           print line[i]+":"+line[i+1]
         if line[i] != line[i+1] : # asn=asn 
            if cur.execute("select id, connect,locked,up_date  from aspath where type='%s' and `asn`='%s' \
-           and nextasn='%s'  " % (type,line[i],line[i+1]))== 0 :
+           and nextasn='%s' limit 1 " % (type,line[i],line[i+1]))== 0 :
            # inserting NEW entry
               """
               as1=line[i];as2=line[i+1]
@@ -97,8 +97,8 @@ while True :
               if fetch[3]!='' or fetch[3]!='0000-00-00' :
                   connecting=fetch[1]+1
               cur.execute("select id from aspath where id=%s for update" % fetch[0])
-              cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10) \
-              where id=%s " % (connecting, fetch[0]))
+              cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10),locked=%d \
+              where id=%s " % (connecting,no, fetch[0]))
         i+=1
         #if no%1000 ==0 :
         #      print "an AS-path"

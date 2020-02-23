@@ -33,64 +33,65 @@ fhandler=  file(dumpfile,'r')
 cnaspath= file(cnroute,'w')
 error=0; totalLines=0;cnentries=0;cnblocks=0;prvsline='';globalentries=0;
 try : 
-   err=0
+   err=0 
+   if cur.execute("select asn,'' from as_plus_cc where cc='cn'") :
+          cnlist=cur.fetchall()
+   else  :
+        cnlist=''
+        print  'cn list is empty'     
    readline=fhandler.readline()
    
-   while 1 :
-    line=readline # read PREFIX
-    if line=='' :
+   while cnlist :
+     line=readline # read PREFIX
+     if line=='' :
          break
-    line=line.strip()
-    blocks=line.split()
-    if blocks[0]=='::/0' :
+     line=line.strip()
+     blocks=line.split()
+     if blocks[0]=='::/0' :
+        readline=fhandler.readline()
+        continue  #default route
+     while True :
        readline=fhandler.readline()
-       continue  #default route
-    while True :
-      readline=fhandler.readline()
-#    if readline=='' :
-#       break
-#    print rl
-      if readline.split()[0]!=blocks[0] :  #pass all the same route entries followed
-        break    
-    asn=blocks[1:]
-    globalentries+=1
-    try :
-      asn=asn[-1] #last as of the aspath
-    except Exception, e:
-      print e;
-      error=1
-    if error :
-      error=0 
-      continue
-    if asn.find('{')!= -1 :
-       continue
-    asn=asn.split('.')
-    if len(asn)==2 :
-      asn=int(asn[0])*65536+int(asn[1])
-    else :
-      asn=int(asn[0])
-    if cur.execute("select cc, date from inet_num where type='asn' and addr<=%d and addr+block>%d order by date desc" % (asn,asn)) :
-      result=cur.fetchone()[0].lower() #as in China?
-      #print str(asn)+": "+result
-    else :
-      result=''
-      continue
-    if result=='cn' :
-      cnentries+=1
-      blocks=blocks[0].split('/');
-    #  if cnentries%100==0 : 
-      if 1 :
+       if readline=='' :
+              break 
+       if readline.split()[0]!=blocks[0] :  #pass all the same route entries followed
+           break    
+     asn=blocks[1:]
+     globalentries+=1
+     try :
+        asn=asn[-1] #last as of the aspath
+     except Exception, e:
+        print e;
+        error=1
+     if error :
+        error=0 
+        continue
+     if asn.find('{')!= -1 :
+        continue
+     asn=asn.split('.') ;#16 or 32 bits asn
+     if len(asn)==2 :
+       asn=int(asn[0])*65536+int(asn[1])
+     else :
+        asn=int(asn[0])
+     asn=[str(asn),'']
+     asn=tuple(asn); # print asn
+     if asn in cnlist :
+       cnentries+=1
+       blocks=blocks[0].split('/');
+     #  if cnentries%1000==0 : 
+       if 1 :
             print "%s: %s" % (cnentries, line)
-      cnaspath.write(line+'\n')
+       cnaspath.write(line+'\n')
     #print outline
-      cnblocks+=int(2**(48-int(blocks[1])))
+       cnblocks+=int(2**(48-int(blocks[1])))
 except Exception, e :
    print e
+   print line+'\n' +readline 
    err=1
 finally :
-  fhandler.close()
-  cnaspath.write("BGP entries from China: "+str(cnentries))
-  cnaspath.close()
+    fhandler.close()
+    cnaspath.write("BGP entries from China: "+str(cnentries))
+    cnaspath.close()
 
 try :
   if err!=1 :

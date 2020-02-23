@@ -8,17 +8,6 @@ def nicStat(nic):
     filename= 'delegated-ripencc-latest'
     os.system('rm -f ./nicdata/%s' % filename)
     os.system('wget ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
-    """ 
-    elif nic=='arin' :
-      filename='delegated-arin-extended-latest'
-      os.system('rm -f ./nicdata/%s' % filename)
-      os.system('wget --prefer-family=ipv6  ftp://ftp.apnic.net/pub/stats/arin/%s -O ./nicdata/%s' % (filename,filename))
-    elif nic=='apnic' :
-      filename='delegated-apnic-extended-latest'
-      os.system('rm -f ./nicdata/%s' % filename)
-      os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))
-      print 'apnic'
-    """
   else :
      filename='delegated-'+nic+'-extended-latest'
      os.system('rm -f ./nicdata/%s' % filename) ;#rm the file      
@@ -52,20 +41,21 @@ def nicStat(nic):
  	     if cur.execute("select addr, block from inet_num where addr='%s' and date='%s' " \
              % (line[3],line[5])) ==0 :  #no in the table      
  	 	line=tuple(line)
-                print line    
+  #              print line    
                 try :         
  	 	   cur.execute("insert inet_num(NIC,CC,type,addr,block,date,state) value('%s','%s','%s','%s','%s','%s','%s') " % line[0:7]) 
                 except mdb.Error, e  :
                    print "Error is %s" % e
                    error=1
+                finally :
+                   conn.commit()
                 if error :         
                    continue
-             conn.commit() 
 #    else:
 #        print 'pass '              
   fhandler.close()
   conn.close()
-niclist=['ripe-ncc','arin','afrinic','lacnic'] 
+niclist=['apnic','ripe-ncc','arin','afrinic','lacnic'] 
 for nic in niclist :     
 	nicStat(nic)
             
