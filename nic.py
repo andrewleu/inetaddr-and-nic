@@ -7,11 +7,11 @@ def nicStat(nic):
   if nic=='ripe-ncc' :
     filename= 'delegated-ripencc-latest'
     os.system('rm -f ./nicdata/%s' % filename)
-    os.system('wget ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
+    os.system('wget -q ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
   else :
      filename='delegated-'+nic+'-extended-latest'
      os.system('rm -f ./nicdata/%s' % filename) ;#rm the file      
-     os.system('wget ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))         
+     os.system('wget -q ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))         
   conn=mdb.connect('127.0.0.1','ipv6bgp','ipv6','NICstat')         
   filename='./nicdata/'+filename                  
   fhandler=	file(filename,'r')         

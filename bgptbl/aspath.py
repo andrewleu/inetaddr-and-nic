@@ -25,7 +25,7 @@ if ftch[0]!='' :
    cnt=int(ftch[0])
 else :
    cnt=0
-print time.asctime()+": "+"Proceeding the BGP table of IPv6"
+print "Proceeding the BGP table of IPv6"
 lck=ftch[1]
 lck=0
 #if lck==0 :
@@ -61,7 +61,6 @@ while True :
     line=line.split()[1:] #from `second field to analyse
     i=0
     if no%10000==0 :
-       print time.asctime()
        print "line number : %s" % no
        print line
    #print str(no)+' '+str(line)
@@ -70,8 +69,25 @@ while True :
           print line[i]+":"+line[i+1]
         if line[i] != line[i+1] : # asn=asn 
            if cur.execute("select id, connect,locked,up_date  from aspath where type='%s' and `asn`='%s' \
-           and nextasn='%s' limit 1 " % (type,line[i],line[i+1]))== 0 :
+           and nextasn='%s'  " % (type,line[i],line[i+1]))== 0 :
            # inserting NEW entry
+              """
+              as1=line[i];as2=line[i+1]
+              if line[i].find('.')>0 :
+                 as1=str(int(line[i].split('.')[0])*65536+int(line[i].split('.')[1]))
+              if line[i+1].find('.')>0 :
+                  as2=str(int(line[i+1].split('.')[0])*65536+int(line[i+1].split('.')[1]))
+              if cur.execute("select CC from inet_num where type='asn' and addr<=%s and addr+block-1 >=%s \
+              order by date desc" % (as1, as1)) !=0 :
+                 fromAS=cur.fetchone()[0];
+              else :
+                   fromAS='-'
+              if cur.execute("select CC from inet_num where type='asn' and addr<=%s and addr+block-1 >=%s \
+              order by date desc" % (as2, as2))!=0 :
+                   toAS=cur.fetchone()[0];
+              else :
+                   toAS='-'
+              """
               cur.execute("insert aspath(type,asn, nextasn,1stins, locked,up_date) \
               value('%s','%s','%s',substring(now(),1,10), '%s',substring(now(),1,10))" \
               % (type,line[i],line[i+1],no))
@@ -81,8 +97,8 @@ while True :
               if fetch[3]!='' or fetch[3]!='0000-00-00' :
                   connecting=fetch[1]+1
               cur.execute("select id from aspath where id=%s for update" % fetch[0])
-              cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10),locked=%d \
-              where id=%s " % (connecting,no, fetch[0]))
+              cur.execute("update aspath set connect=%s, up_date=substring(now(),1,10) \
+              where id=%s " % (connecting, fetch[0]))
         i+=1
         #if no%1000 ==0 :
         #      print "an AS-path"
