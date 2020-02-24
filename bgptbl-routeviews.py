@@ -101,7 +101,7 @@ try :
     % (date_format,cnentries,globalentries ,float(cnentries)/globalentries))
     cur.execute("insert publish(date,publish, sum,ratio) values('%s', '%s','%s','%s')" \
     % (date_format,cnblocks,g_blocks[0],float(cnblocks)/g_blocks[0]))
-except Exceptioin, e :
+except Exception, e :
    print e
 cur.execute("commit")
 cur.close()
