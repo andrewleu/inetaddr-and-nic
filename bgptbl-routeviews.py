@@ -78,8 +78,8 @@ try :
      if asn in cnlist :
        cnentries+=1
        blocks=blocks[0].split('/');
-     #  if cnentries%1000==0 : 
-       if 1 :
+       if cnentries%1000==0 : 
+       #if 1 :
             print "%s: %s" % (cnentries, line)
        cnaspath.write(line+'\n')
     #print outline
