@@ -7,16 +7,17 @@ def nicStat(nic):
   if nic=='ripe-ncc' :
     filename= 'delegated-ripencc-latest'
     os.system('rm -f ./nicdata/%s' % filename)
-    os.system('wget -q ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
+    os.system('wget -nv ftp://ftp.apnic.net/pub/stats/ripe-ncc/%s  -O ./nicdata/%s' % (filename,filename)) 
   else :
      filename='delegated-'+nic+'-extended-latest'
      os.system('rm -f ./nicdata/%s' % filename) ;#rm the file      
-     os.system('wget -q ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))         
+     os.system('wget -nv ftp://ftp.apnic.net/pub/stats/%s/%s  -O ./nicdata/%s' % (nic,filename,filename))         
   conn=mdb.connect('127.0.0.1','ipv6bgp','ipv6','NICstat')         
   filename='./nicdata/'+filename                  
   fhandler=	file(filename,'r')         
   cnt=0                    
-  cur=conn.cursor()                  
+  cur=conn.cursor()       
+  initline=1            
   while True :
            error=0
            cnt+=1
@@ -28,7 +29,17 @@ def nicStat(nic):
   	#sys.stdin.read(1)                
     	#print len(line)                  
            if len(line)==0 :                
-  		   break       
+  		   break  
+           if line.find('#')!=-1  :
+               continue  
+           if initline :
+              for idx in range(0,4) :
+                 print line
+                 line=fhandler.readline()
+              # remove 4 lines of the files
+              initline=0 
+              print line
+              # not initline any more
            line=line.strip()
            line=line.split('|')
            if len(line[0])<3 :
